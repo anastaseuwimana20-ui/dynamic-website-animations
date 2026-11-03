@@ -360,4 +360,52 @@
 
    <script type="module" src="script.js"></script>
   </body>
+  
+<!-- STUDENT ACCOUNT SECTION -->
+<section id="accounts" class="auth-section">
+  <div class="auth-container">
+
+    <div id="registerPanel">
+      <h2>Create Student Account</h2>
+      <form id="registerForm">
+        <input id="registerName" type="text"
+          placeholder="Full Name" required>
+
+        <input id="registerEmail" type="email"
+          placeholder="Email Address" required>
+
+        <input id="registerPassword" type="password"
+          placeholder="Password (at least 6 characters)"
+          minlength="6" required>
+
+        <button type="submit">Register</button>
+      </form>
+    </div>
+
+    <div id="loginPanel">
+      <h2>Student Login</h2>
+      <form id="loginForm">
+        <input id="loginEmail" type="email"
+          placeholder="Email Address" required>
+
+        <input id="loginPassword" type="password"
+          placeholder="Password" required>
+
+        <button type="submit">Login</button>
+      </form>
+    </div>
+
+    <div id="userPanel" hidden>
+      <h2>Student Dashboard</h2>
+      <p>Welcome, <span id="userName"></span></p>
+      <p>Email: <span id="userEmail"></span></p>
+      <button id="logoutBtn" type="button">Logout</button>
+    </div>
+
+    <p id="authMessage" aria-live="polite"></p>
+
+  </div>
+</section>
+</body>
+</html>
 </html>
