@@ -1,11 +1,17 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 
-import { getAuth } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import {
+  getAuth
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+import {
+  getFirestore
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD7RDM5zgdyNSg3fs06RKtAMXkWwc9_SJI",
+  apiKey: "AIzaSyD7D7R5zgdyNSg3fs06RKtAMXkWwc9_SJI",
   authDomain: "eav-gitwe-tss.firebaseapp.com",
   projectId: "eav-gitwe-tss",
   storageBucket: "eav-gitwe-tss.firebasestorage.app",
@@ -14,7 +20,12 @@ const firebaseConfig = {
   measurementId: "G-VW0JSHB28Y"
 };
 
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+// Authentication
 export const auth = getAuth(app);
+
+// Firestore Database
 export const db = getFirestore(app);
