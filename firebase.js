@@ -1,17 +1,28 @@
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 
 import {
-  getAuth
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updateProfile
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
 import {
-  getFirestore
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  addDoc,
+  collection,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD7D7R5zgdyNSg3fs06RKtAMXkWwc9_SJI",
+  apiKey: "AIzaSyD7RDM5zgdyNSg3fs06RKtAMXkWwc9_SJI",
   authDomain: "eav-gitwe-tss.firebaseapp.com",
   projectId: "eav-gitwe-tss",
   storageBucket: "eav-gitwe-tss.firebasestorage.app",
@@ -20,12 +31,24 @@ const firebaseConfig = {
   measurementId: "G-VW0JSHB28Y"
 };
 
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Authentication
-export const auth = getAuth(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-// Firestore Database
-export const db = getFirestore(app);
+export {
+  auth,
+  db,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updateProfile,
+  doc,
+  setDoc,
+  getDoc,
+  addDoc,
+  collection,
+  serverTimestamp
+};
