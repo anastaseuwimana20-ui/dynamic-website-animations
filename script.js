@@ -1,431 +1,449 @@
 
-import { auth, db } from "./firebase.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 
 import {
+  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 import {
+  getFirestore,
   doc,
   setDoc,
   getDoc,
+  addDoc,
+  collection,
   serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 
-// =====================================
-// SELECT HTML ELEMENTS
-// =====================================
+// ======================================
+// 1. FIREBASE CONFIGURATION
+// ======================================
 
-const loginTab = document.getElementById("loginTab");
-const registerTab = document.getElementById("registerTab");
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "eav-gitwe-tss.firebaseapp.com",
+  projectId: "eav-gitwe-tss",
+  storageBucket: "eav-gitwe-tss.firebasestorage.app",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "1:457038227189:web:e929c5b758fee7c81487bc"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+
+// ======================================
+// 2. HELPER FUNCTIONS
+// ======================================
+
+function showMessage(elementId, message, success = false) {
+  const element = document.getElementById(elementId);
+
+  if (!element) return;
+
+  element.textContent = message;
+  element.style.color = success ? "green" : "red";
+}
+
+function hideElement(element) {
+  if (element) element.classList.add("hidden");
+}
+
+function showElement(element) {
+  if (element) element.classList.remove("hidden");
+}
+
+
+// ======================================
+// 3. ELEMENTS
+// ======================================
 
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
 
+const loginTab = document.getElementById("loginTab");
+const registerTab = document.getElementById("registerTab");
+
 const authArea = document.getElementById("authArea");
 const dashboard = document.getElementById("dashboard");
-
-const loginMessage = document.getElementById("loginMessage");
-const registerMessage = document.getElementById("registerMessage");
-const dashboardMessage = document.getElementById("dashboardMessage");
 
 const logoutButton = document.getElementById("logoutButton");
 const forgotPassword = document.getElementById("forgotPassword");
 
-const menuToggle = document.getElementById("menuToggle");
-const navLinks = document.getElementById("navLinks");
 
+// ======================================
+// 4. LOGIN AND REGISTER TABS
+// ======================================
 
-// =====================================
-// HELPER FUNCTIONS
-// =====================================
+function showLoginTab() {
+  showElement(loginForm);
+  hideElement(registerForm);
 
-function showMessage(element, message, success = false) {
-  if (!element) return;
-
-  element.textContent = message;
-  element.style.color = success ? "#145c3a" : "#c0392b";
+  loginTab?.classList.add("active");
+  registerTab?.classList.remove("active");
 }
 
-function clearMessages() {
-  showMessage(loginMessage, "");
-  showMessage(registerMessage, "");
-  showMessage(dashboardMessage, "");
+function showRegisterTab() {
+  showElement(registerForm);
+  hideElement(loginForm);
+
+  registerTab?.classList.add("active");
+  loginTab?.classList.remove("active");
 }
 
-function friendlyError(error) {
-  const errors = {
-    "auth/email-already-in-use":
-      "This email is already registered. Please login.",
-
-    "auth/invalid-email":
-      "Please enter a valid email address.",
-
-    "auth/weak-password":
-      "Password must contain at least 6 characters.",
-
-    "auth/user-not-found":
-      "No account found with this email.",
-
-    "auth/wrong-password":
-      "Incorrect email or password.",
-
-    "auth/invalid-credential":
-      "Incorrect email or password.",
-
-    "auth/too-many-requests":
-      "Too many attempts. Please try again later.",
-
-    "auth/network-request-failed":
-      "Network error. Check your internet connection.",
-
-    "auth/operation-not-allowed":
-      "Email and Password login is not enabled in Firebase."
-  };
-
-  return errors[error.code] || "Something went wrong. Please try again.";
-}
+loginTab?.addEventListener("click", showLoginTab);
+registerTab?.addEventListener("click", showRegisterTab);
 
 
-// =====================================
-// LOGIN AND REGISTER TABS
-// =====================================
+// ======================================
+// 5. STUDENT REGISTRATION
+// ======================================
 
-function showLogin() {
-  loginForm.classList.remove("hidden");
-  registerForm.classList.add("hidden");
-
-  loginTab.classList.add("active");
-  registerTab.classList.remove("active");
-
-  clearMessages();
-}
-
-function showRegister() {
-  registerForm.classList.remove("hidden");
-  loginForm.classList.add("hidden");
-
-  registerTab.classList.add("active");
-  loginTab.classList.remove("active");
-
-  clearMessages();
-}
-
-loginTab.addEventListener("click", showLogin);
-registerTab.addEventListener("click", showRegister);
-
-
-// =====================================
-// STUDENT REGISTRATION
-// =====================================
-
-registerForm.addEventListener("submit", async (event) => {
+registerForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  clearMessages();
+  const name = document.getElementById("studentName")?.value.trim();
+  const email = document.getElementById("studentEmail")?.value.trim();
+  const studentClass = document.getElementById("studentClass")?.value;
+  const program = document.getElementById("studentProgram")?.value;
+  const password = document.getElementById("registerPassword")?.value;
 
-  const fullName =
-    document.getElementById("studentName").value.trim();
-
-  const email =
-    document.getElementById("studentEmail").value.trim();
-
-  const studentClass =
-    document.getElementById("studentClass").value.trim();
-
-  const program =
-    document.getElementById("studentProgram").value;
-
-  const password =
-    document.getElementById("registerPassword").value;
-
-  if (!fullName || !email || !studentClass || !program || !password) {
-    showMessage(registerMessage, "Please complete all fields.");
+  if (!name || !email || !studentClass || !program || !password) {
+    showMessage("registerMessage", "Please complete all fields.");
     return;
   }
 
   if (password.length < 6) {
-    showMessage(registerMessage, "Password must be at least 6 characters.");
+    showMessage(
+      "registerMessage",
+      "Password must contain at least 6 characters."
+    );
     return;
   }
 
-  const submitButton = registerForm.querySelector(
-    'button[type="submit"]'
-  );
-
-  submitButton.disabled = true;
-  submitButton.textContent = "Creating account...";
+  const submitButton = registerForm.querySelector('button[type="submit"]');
 
   try {
+    if (submitButton) submitButton.disabled = true;
 
-    // Create Firebase Authentication account
-    const userCredential =
-      await createUserWithEmailAndPassword(auth, email, password);
+    showMessage("registerMessage", "Creating your account...");
+
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
     const user = userCredential.user;
 
-    // Save student profile in Firestore
-    const studentData = {
-      fullName: fullName,
-      email: user.email,
+    // Save student information in Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      uid: user.uid,
+      name: name,
+      email: email,
       studentClass: studentClass,
       program: program,
       createdAt: serverTimestamp()
-    };
+    });
 
-    await setDoc(doc(db, "users", user.uid), studentData);
+    registerForm.reset();
 
     showMessage(
-      registerMessage,
+      "registerMessage",
       "Account created successfully!",
       true
     );
 
-    registerForm.reset();
-
-    await renderDashboard(user, studentData);
-
   } catch (error) {
-
     console.error("Registration error:", error);
 
-    showMessage(registerMessage, friendlyError(error));
+    let message = "Registration failed. Please try again.";
+
+    if (error.code === "auth/email-already-in-use") {
+      message = "This email is already registered. Please login.";
+    } else if (error.code === "auth/invalid-email") {
+      message = "Please enter a valid email address.";
+    } else if (error.code === "auth/weak-password") {
+      message = "Please use a stronger password.";
+    } else if (error.code === "permission-denied") {
+      message = "Database permission denied. Check Firestore Rules.";
+    }
+
+    showMessage("registerMessage", message);
 
   } finally {
-
-    submitButton.disabled = false;
-    submitButton.textContent = "Create Student Account";
-
+    if (submitButton) submitButton.disabled = false;
   }
 });
 
 
-// =====================================
-// STUDENT LOGIN
-// =====================================
+// ======================================
+// 6. STUDENT LOGIN
+// ======================================
 
-loginForm.addEventListener("submit", async (event) => {
-
+loginForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  clearMessages();
+  const email = document.getElementById("loginEmail")?.value.trim();
+  const password = document.getElementById("loginPassword")?.value;
 
-  const email =
-    document.getElementById("loginEmail").value.trim();
+  if (!email || !password) {
+    showMessage("loginMessage", "Please enter email and password.");
+    return;
+  }
 
-  const password =
-    document.getElementById("loginPassword").value;
-
-  const submitButton = loginForm.querySelector(
-    'button[type="submit"]'
-  );
-
-  submitButton.disabled = true;
-  submitButton.textContent = "Logging in...";
+  const submitButton = loginForm.querySelector('button[type="submit"]');
 
   try {
+    if (submitButton) submitButton.disabled = true;
 
-    const userCredential =
-      await signInWithEmailAndPassword(auth, email, password);
+    showMessage("loginMessage", "Logging in...");
 
-    await renderDashboard(userCredential.user);
+    await signInWithEmailAndPassword(auth, email, password);
 
     loginForm.reset();
 
-  } catch (error) {
+    showMessage("loginMessage", "Login successful!", true);
 
+  } catch (error) {
     console.error("Login error:", error);
 
-    showMessage(loginMessage, friendlyError(error));
+    let message = "Login failed. Check your email and password.";
+
+    if (error.code === "auth/user-not-found") {
+      message = "Account not found. Please register first.";
+    } else if (error.code === "auth/wrong-password" ||
+               error.code === "auth/invalid-credential") {
+      message = "Incorrect email or password.";
+    } else if (error.code === "auth/invalid-email") {
+      message = "Please enter a valid email.";
+    } else if (error.code === "auth/too-many-requests") {
+      message = "Too many attempts. Please try again later.";
+    }
+
+    showMessage("loginMessage", message);
 
   } finally {
-
-    submitButton.disabled = false;
-    submitButton.textContent = "Login to Portal";
-
+    if (submitButton) submitButton.disabled = false;
   }
-
 });
 
 
-// =====================================
-// FORGOT PASSWORD
-// =====================================
+// ======================================
+// 7. FORGOT PASSWORD
+// ======================================
 
-forgotPassword.addEventListener("click", async () => {
+forgotPassword?.addEventListener("click", async (event) => {
+  event.preventDefault();
 
-  const email =
-    document.getElementById("loginEmail").value.trim();
+  const email = document.getElementById("loginEmail")?.value.trim();
 
   if (!email) {
     showMessage(
-      loginMessage,
+      "loginMessage",
       "Enter your email address first."
     );
     return;
   }
 
   try {
-
     await sendPasswordResetEmail(auth, email);
 
     showMessage(
-      loginMessage,
+      "loginMessage",
       "Password reset instructions have been sent to your email.",
       true
     );
 
   } catch (error) {
-
     console.error("Password reset error:", error);
 
-    showMessage(loginMessage, friendlyError(error));
-
+    showMessage(
+      "loginMessage",
+      "Could not send reset email. Check the email address and Firebase settings."
+    );
   }
-
 });
 
 
-// =====================================
-// DISPLAY STUDENT DASHBOARD
-// =====================================
+// ======================================
+// 8. DISPLAY STUDENT DASHBOARD
+// ======================================
 
-async function renderDashboard(user, suppliedData = null) {
-
+async function loadStudentDashboard(user) {
   try {
+    const studentRef = doc(db, "users", user.uid);
+    const studentSnapshot = await getDoc(studentRef);
 
-    let studentData = suppliedData;
-
-    if (!studentData) {
-
-      const studentRef = doc(db, "users", user.uid);
-
-      const studentSnapshot = await getDoc(studentRef);
-
-      if (studentSnapshot.exists()) {
-        studentData = studentSnapshot.data();
-      } else {
-        studentData = {};
-      }
-
+    if (!studentSnapshot.exists()) {
+      showMessage(
+        "dashboardMessage",
+        "Student profile was not found. Contact the school administrator."
+      );
+      return;
     }
 
-    document.getElementById("profileName").textContent =
-      studentData.fullName || "Student";
+    const student = studentSnapshot.data();
 
-    document.getElementById("profileEmail").textContent =
-      user.email || "-";
+    const profileName = document.getElementById("profileName");
+    const profileEmail = document.getElementById("profileEmail");
+    const profileClass = document.getElementById("profileClass");
+    const profileProgram = document.getElementById("profileProgram");
 
-    document.getElementById("profileClass").textContent =
-      studentData.studentClass || "Not provided";
+    if (profileName) profileName.textContent = student.name || "Student";
+    if (profileEmail) profileEmail.textContent = student.email || user.email;
+    if (profileClass) profileClass.textContent = student.studentClass || "Not provided";
+    if (profileProgram) profileProgram.textContent = student.program || "Not provided";
 
-    document.getElementById("profileProgram").textContent =
-      studentData.program || "Not provided";
+    showElement(dashboard);
+    hideElement(authArea);
 
-    authArea.classList.add("hidden");
-    dashboard.classList.remove("hidden");
+    showMessage("dashboardMessage", "Welcome to your student dashboard.", true);
+
+  } catch (error) {
+    console.error("Dashboard error:", error);
 
     showMessage(
-      dashboardMessage,
-      "You are successfully logged in.",
+      "dashboardMessage",
+      "Unable to load student profile. Check your internet connection and Firestore Rules."
+    );
+  }
+}
+
+
+// ======================================
+// 9. LOGOUT
+// ======================================
+
+logoutButton?.addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+
+    showElement(authArea);
+    hideElement(dashboard);
+
+    showLoginTab();
+
+    showMessage("loginMessage", "You have logged out successfully.", true);
+
+  } catch (error) {
+    console.error("Logout error:", error);
+
+    showMessage("dashboardMessage", "Logout failed. Please try again.");
+  }
+});
+
+
+// ======================================
+// 10. CHECK USER LOGIN STATUS
+// ======================================
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    hideElement(authArea);
+    showElement(dashboard);
+
+    await loadStudentDashboard(user);
+
+  } else {
+    showElement(authArea);
+    hideElement(dashboard);
+  }
+});
+
+
+// ======================================
+// 11. CONTACT FORM
+// ======================================
+
+const contactForm = document.getElementById("contactForm");
+
+contactForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const name = document.getElementById("contactName")?.value.trim();
+  const email = document.getElementById("contactEmail")?.value.trim();
+  const subject = document.getElementById("contactSubject")?.value.trim();
+  const message = document.getElementById("contactMessage")?.value.trim();
+
+  if (!name || !email || !subject || !message) {
+    showMessage("contactStatus", "Please complete all contact fields.");
+    return;
+  }
+
+  const submitButton = contactForm.querySelector('button[type="submit"]');
+
+  try {
+    if (submitButton) submitButton.disabled = true;
+
+    showMessage("contactStatus", "Sending your message...");
+
+    await addDoc(collection(db, "messages"), {
+      name: name,
+      email: email,
+      subject: subject,
+      message: message,
+      createdAt: serverTimestamp()
+    });
+
+    contactForm.reset();
+
+    showMessage(
+      "contactStatus",
+      "Your message has been sent successfully. Thank you!",
       true
     );
 
   } catch (error) {
-
-    console.error("Dashboard error:", error);
-
-    showMessage(
-      dashboardMessage,
-      "Unable to load your student profile."
-    );
-
-  }
-
-}
-
-
-// =====================================
-// FIREBASE AUTHENTICATION STATE
-// =====================================
-
-onAuthStateChanged(auth, async (user) => {
-
-  if (user) {
-
-    await renderDashboard(user);
-
-  } else {
-
-    dashboard.classList.add("hidden");
-    authArea.classList.remove("hidden");
-
-  }
-
-});
-
-
-// =====================================
-// STUDENT LOGOUT
-// =====================================
-
-logoutButton.addEventListener("click", async () => {
-
-  try {
-
-    await signOut(auth);
-
-    dashboard.classList.add("hidden");
-    authArea.classList.remove("hidden");
-
-    showLogin();
-
-  } catch (error) {
-
-    console.error("Logout error:", error);
+    console.error("Contact form error:", error);
 
     showMessage(
-      dashboardMessage,
-      "Unable to logout. Please try again."
+      "contactStatus",
+      "Message could not be sent. Please try again."
     );
 
+  } finally {
+    if (submitButton) submitButton.disabled = false;
   }
-
 });
 
 
-// =====================================
-// MOBILE NAVIGATION
-// =====================================
+// ======================================
+// 12. MOBILE NAVIGATION
+// ======================================
 
-menuToggle.addEventListener("click", () => {
+const menuToggle = document.getElementById("menuToggle");
+const navLinks = document.getElementById("navLinks");
 
-  navLinks.classList.toggle("show");
+menuToggle?.addEventListener("click", () => {
+  const isOpen = navLinks?.classList.toggle("show");
 
+  menuToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
+  menuToggle.textContent = isOpen ? "✕" : "☰";
 });
 
-document.querySelectorAll(".nav-links a").forEach((link) => {
-
+navLinks?.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => {
-
     navLinks.classList.remove("show");
 
-  });
+    menuToggle?.setAttribute("aria-expanded", "false");
 
+    if (menuToggle) menuToggle.textContent = "☰";
+  });
 });
 
 
-// =====================================
-// CURRENT YEAR
-// =====================================
+// ======================================
+// 13. INITIAL PAGE STATE
+// ======================================
 
-document.getElementById("currentYear").textContent =
-  new Date().getFullYear();
+showLoginTab();
 
-
-console.log("EAV Gitwe TSS website initialized successfully.");
+console.log("EAV Gitwe TSS Website initialized successfully.");
